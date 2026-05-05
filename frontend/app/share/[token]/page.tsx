@@ -4,12 +4,13 @@ import { notFound } from "next/navigation";
 import { decodeShareToken } from "@/lib/share-token";
 import { siteUrl } from "@/lib/site";
 
+/** Next 13 は同期、15+ は Promise のため両対応 */
 type Props = {
-  params: Promise<{ token: string }>;
+  params: { token: string } | Promise<{ token: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { token } = await params;
+  const { token } = await Promise.resolve(params);
   // 自己 HTTP フェッチ（VERCEL_URL 等）に依存しない。トークンから直接復元する。
   const meta = decodeShareToken(token);
   if (!meta) {
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function SharePage({ params }: Props) {
-  const { token } = await params;
+  const { token } = await Promise.resolve(params);
   const meta = decodeShareToken(token);
   if (!meta) notFound();
 
