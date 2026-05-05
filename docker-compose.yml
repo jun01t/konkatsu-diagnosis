@@ -1,0 +1,29 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      # ブラウザはホストの localhost:3000 から API の localhost:8080 を直接呼ぶ
+      CORS_ORIGINS: "http://localhost:3000,http://127.0.0.1:3000"
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4o-mini}
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      # クライアント（ブラウザ）→ ホスト経由で API へ
+      NEXT_PUBLIC_API_URL: "http://localhost:8080"
+      # Next のサーバー（OG 取得）→ Compose 内ホスト名で API へ
+      API_URL: "http://api:8080"
+      NEXT_PUBLIC_SITE_URL: "http://localhost:3000"
+    depends_on:
+      - api

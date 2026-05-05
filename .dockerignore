@@ -1,0 +1,9 @@
+frontend/
+.git
+.gitignore
+*.md
+.dockerignore
+Dockerfile.api
+docker-compose*.yml
+.env
+.env.*

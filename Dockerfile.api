@@ -1,0 +1,22 @@
+# Go API（静的バイナリ）
+FROM golang:1.22-alpine AS build
+WORKDIR /src
+
+RUN apk add --no-cache git
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
+
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/server
+
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates && adduser -D -u 1000 app
+USER 1000
+WORKDIR /app
+COPY --from=build /out/api ./
+EXPOSE 8080
+ENV PORT=8080
+CMD ["./api"]

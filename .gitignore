@@ -1,0 +1,42 @@
+# Secrets & local env (templates stay tracked)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Go
+/bin/
+/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+vendor/
+go.work
+go.work.sum
+
+# Node / Next.js (frontend; also safe if tools run from repo root)
+node_modules/
+.next/
+out/
+.turbo/
+
+# Logs & temp
+*.log
+tmp/
+temp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE / editor
+.idea/
+*.swp
+*.swo
+*~
