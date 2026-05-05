@@ -16,18 +16,6 @@ export function apiUrl(path: string): string {
   return base ? `${base}${p}` : p;
 }
 
-/**
- * サーバー側（generateMetadata 等）の API ベース。
- * Vercel では `VERCEL_URL` で自デプロイに向ける。
- */
-export function getServerApiBase(): string {
-  const u = process.env.API_URL?.trim() || process.env.NEXT_PUBLIC_API_URL?.trim();
-  if (u) return u.replace(/\/$/, "");
-  const v = process.env.VERCEL_URL?.trim();
-  if (v) return `https://${v.replace(/\/$/, "")}`;
-  return "http://127.0.0.1:3000";
-}
-
 export async function fetchQuestions(): Promise<Question[]> {
   const res = await fetch(apiUrl("/api/questions"), {
     next: { revalidate: 60 },
@@ -51,17 +39,5 @@ export async function postDiagnose(
     const t = await res.text();
     throw new Error(t || `HTTP ${res.status}`);
   }
-  return res.json();
-}
-
-export async function fetchShareMeta(token: string): Promise<{
-  score: number;
-  headline: string;
-} | null> {
-  const enc = encodeURIComponent(token);
-  const res = await fetch(`${getServerApiBase()}/api/share/${enc}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) return null;
   return res.json();
 }

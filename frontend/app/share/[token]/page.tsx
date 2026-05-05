@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { fetchShareMeta } from "@/lib/api";
+import { decodeShareToken } from "@/lib/share-token";
 import { siteUrl } from "@/lib/site";
 
 type Props = {
@@ -10,7 +10,8 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { token } = await params;
-  const meta = await fetchShareMeta(token);
+  // 自己 HTTP フェッチ（VERCEL_URL 等）に依存しない。トークンから直接復元する。
+  const meta = decodeShareToken(token);
   if (!meta) {
     return { title: "見つかりません" };
   }
@@ -40,7 +41,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SharePage({ params }: Props) {
   const { token } = await params;
-  const meta = await fetchShareMeta(token);
+  const meta = decodeShareToken(token);
   if (!meta) notFound();
 
   return (

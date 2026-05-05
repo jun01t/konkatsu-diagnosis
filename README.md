@@ -12,7 +12,7 @@
    - `OPENAI_MODEL` … 既定 `gpt-4o-mini`
    - `NEXT_PUBLIC_SITE_URL` … 本番 URL（未設定時は `VERCEL_URL` を利用）
 
-`NEXT_PUBLIC_API_URL` / `API_URL` は **空のまま**でよい（同一オリジンの `/api/questions`・`/api/diagnose`・`/api/share/...` を使用）。
+`NEXT_PUBLIC_API_URL` は **空のまま**でよい（同一オリジンの `/api/questions`・`/api/diagnose` を使用。共有ページはトークンを直接デコード）。
 
 ## 開発
 
@@ -63,7 +63,7 @@ docker compose up --build
 - フロント: <http://localhost:3000>
 - API: <http://localhost:8080/health>
 
-ブラウザは **ホストの** `localhost:8080` へ直接リクエストするため、`NEXT_PUBLIC_API_URL=http://localhost:8080` にしています。Next のサーバー（共有ページのメタ取得）だけ `http://api:8080`（Compose 内のサービス名）を使います。
+ブラウザは **ホストの** `localhost:8080` へ直接リクエストするため、`NEXT_PUBLIC_API_URL=http://localhost:8080` にしています。共有ページ `/share/...` は URL 内トークンをサーバーで直接復元するため、SSR 向けの別 API URL は不要です。
 
 ## 環境変数
 
@@ -72,12 +72,11 @@ docker compose up --build
 | `OPENAI_API_KEY` | Go または **Next（Vercel）** | 未設定時はモック診断 |
 | `OPENAI_MODEL` | 同上 | 既定 `gpt-4o-mini` |
 | `NEXT_PUBLIC_API_URL` | Next | **空**＝同一オリジンの Route Handlers。Go 分離時のみ Go の URL |
-| `API_URL` | Next | SSR 用 API ベース。**空**＋Vercel では `VERCEL_URL` を使用 |
 | `NEXT_PUBLIC_SITE_URL` | Next | OGP の絶対URL（本番推奨） |
 | `CORS_ORIGINS` | Go | ブラウザから別オリジンの Go を叩くとき必須 |
 
 ## 本番の例
 
 - **Vercel のみ**: `frontend` をデプロイし、必要なら `OPENAI_API_KEY` を設定（上記）。
-- **Go を別ホストに置く場合**: `NEXT_PUBLIC_API_URL` と `API_URL` に Go の URL、`CORS_ORIGINS` にフロントのオリジン。
+- **Go を別ホストに置く場合**: `NEXT_PUBLIC_API_URL` に Go の URL、`CORS_ORIGINS` にフロントのオリジン。
 # konkatsu-diagnosis
