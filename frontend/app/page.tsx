@@ -20,10 +20,12 @@ export default function HomePage() {
         const q = await fetchQuestions();
         if (!cancelled) setQuestions(q);
       } catch {
-        if (!cancelled)
-          setLoadError(
-            `設問の取得に失敗しました。Go API が ${getPublicApiBase()} で起動しているか確認してください。`
-          );
+        if (!cancelled) {
+          const hint = getPublicApiBase()
+            ? `API (${getPublicApiBase()}) が応答するか確認してください。`
+            : "同一オリジンの /api/questions が応答するか確認してください。";
+          setLoadError(`設問の取得に失敗しました。${hint}`);
+        }
       }
     })();
     return () => {
@@ -179,8 +181,8 @@ export default function HomePage() {
 
       <footer className="foot">
         <p>
-          フロント: Next.js / API: Go（<code>NEXT_PUBLIC_API_URL</code>）。本番は{" "}
-          <code>CORS_ORIGINS</code> にフロントのオリジンを追加してください。
+          フロント: Next.js。API は同一オリジンの <code>/api/*</code> または{" "}
+          <code>NEXT_PUBLIC_API_URL</code> で指定した Go。
         </p>
       </footer>
     </>

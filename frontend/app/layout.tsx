@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "婚活偏差値診断（AI）— エンタメ自己理解用",
   description:
     "設問に答えるとプロフィール・行動・マインドのバランスを偏差値っぽいスコアでまとめます（エンタメ）。",
+  icons: {
+    icon: "/og-default.svg",
+  },
 };
 
 export default function RootLayout({
