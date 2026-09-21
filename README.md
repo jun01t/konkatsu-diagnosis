@@ -8,8 +8,8 @@
 1. Vercel の **Root Directory** を **`frontend`** に設定する
 2. **Framework Preset** は **Next.js**（Go にしない）
 3. 環境変数（任意）:
-   - `OPENAI_API_KEY` … 未設定ならモック診断
-   - `OPENAI_MODEL` … 既定 `gpt-4o-mini`
+   - `AI_GATEWAY_API_KEY` … Vercel AI Gateway のキー。未設定かつ OIDC も無い場合はモック診断
+   - `AI_GATEWAY_MODEL` … 既定 `openai/gpt-4o-mini`（`creator/model` 形式）
    - `NEXT_PUBLIC_SITE_URL` … 本番 URL（未設定時は `VERCEL_URL` を利用）
 
 `NEXT_PUBLIC_API_URL` は **空のまま**でよい（同一オリジンの `/api/questions`・`/api/diagnose` を使用。共有ページはトークンを直接デコード）。
@@ -69,14 +69,16 @@ docker compose up --build
 
 | 変数 | 場所 | 説明 |
 |------|------|------|
-| `OPENAI_API_KEY` | Go または **Next（Vercel）** | 未設定時はモック診断 |
-| `OPENAI_MODEL` | 同上 | 既定 `gpt-4o-mini` |
+| `AI_GATEWAY_API_KEY` | **Next（Vercel）** | AI Gateway 認証。未設定かつ `VERCEL_OIDC_TOKEN` も無い場合はモック |
+| `AI_GATEWAY_MODEL` | Next | 既定 `openai/gpt-4o-mini` |
+| `OPENAI_API_KEY` | Go | 未設定時はモック診断（Go 分離時） |
+| `OPENAI_MODEL` | Go | 既定 `gpt-4o-mini` |
 | `NEXT_PUBLIC_API_URL` | Next | **空**＝同一オリジンの Route Handlers。Go 分離時のみ Go の URL |
 | `NEXT_PUBLIC_SITE_URL` | Next | OGP の絶対URL（本番推奨） |
 | `CORS_ORIGINS` | Go | ブラウザから別オリジンの Go を叩くとき必須 |
 
 ## 本番の例
 
-- **Vercel のみ**: `frontend` をデプロイし、必要なら `OPENAI_API_KEY` を設定（上記）。
+- **Vercel のみ**: `frontend` をデプロイし、AI 文面は **Vercel AI Gateway**（`AI_GATEWAY_API_KEY` または OIDC）経由。キー未設定時はモック。
 - **Go を別ホストに置く場合**: `NEXT_PUBLIC_API_URL` に Go の URL、`CORS_ORIGINS` にフロントのオリジン。
 # konkatsu-diagnosis

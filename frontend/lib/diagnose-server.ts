@@ -1,6 +1,25 @@
 import { ALL_QUESTIONS, SCORE_GUIDE } from "./questions-data";
 import type { Question } from "./types";
 
+const GATEWAY_CHAT_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
+
+function hasGatewayAuth(): boolean {
+  return Boolean(
+    (process.env.AI_GATEWAY_API_KEY ?? "").trim() ||
+      (process.env.VERCEL_OIDC_TOKEN ?? "").trim()
+  );
+}
+
+function gatewayModel(): string {
+  const raw = (
+    process.env.AI_GATEWAY_MODEL ??
+    process.env.OPENAI_MODEL ??
+    "openai/gpt-4o-mini"
+  ).trim();
+  if (raw.includes("/")) return raw;
+  return `openai/${raw}`;
+}
+
 export type DiagnoseResult = {
   score: number;
   headline: string;
@@ -123,16 +142,7 @@ function mockResult(answers: Record<string, string>): DiagnoseResult {
   return { score, headline, bullets, shareText };
 }
 
-type ChatReq = {
-  model: string;
-  messages: { role: string; content: string }[];
-  temperature: number;
-  response_format?: { type: string };
-};
-
-async function callOpenAI(
-  apiKey: string,
-  model: string,
+async function callGateway(
   answers: Record<string, string>
 ): Promise<DiagnoseResult> {
   const ref = scoreFromAnswers(answers);
@@ -140,34 +150,38 @@ async function callOpenAI(
   const sys = `あなたは日本語の婚活コーチのトーンで、短く具体的に返す。
 ${SCORE_GUIDE}
 必ず次のJSONだけを返す（説明文やコードフェンスは禁止）:
-{"score":整数,"headline":"28文字以内の前向きな一言","bullets":["箇条書き1","箇条書き2","箇条書き3"],"shareText":"X投稿用。スコアと一言とハッシュタグを含め280文字以内"}
+{"headline":"28文字以内の前向きな一言","bullets":["箇条書き1","箇条書き2","箇条書き3"],"shareText":"X投稿用"}
 
-JSON の score は、ユーザー文に書かれた「算出済みの目安スコア」と必ず同じ整数にすること（別の数値を推測しない）。
-bulletsは各40文字以内。shareTextには「婚活偏差値〇〇」（〇〇はそのscore）「#婚活偏差値診断」を含める。
+score はサーバー側で ${ref} に固定する（JSON に含めなくてよい）。
+bulletsは各40文字以内。shareTextには「婚活偏差値${ref}」「#婚活偏差値診断」を含める（280文字以内）。
 「改善」「見直し」中心の文言はスコアが低いときだけ。スコアが高めのときは強みの維持・仕上げの観点を中心に。`;
 
-  const body: ChatReq = {
-    model,
-    temperature: 0.5,
-    messages: [
-      { role: "system", content: sys },
-      { role: "user", content: userPayload },
-    ],
-    response_format: { type: "json_object" },
-  };
+  const apiKey = (
+    process.env.AI_GATEWAY_API_KEY ||
+    process.env.VERCEL_OIDC_TOKEN ||
+    ""
+  ).trim();
 
-  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+  const res = await fetch(GATEWAY_CHAT_URL, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      model: gatewayModel(),
+      temperature: 0.5,
+      messages: [
+        { role: "system", content: sys },
+        { role: "user", content: userPayload },
+      ],
+      response_format: { type: "json_object" },
+    }),
   });
 
   const raw = await res.text();
   if (!res.ok) {
-    throw new Error(`openai: ${res.status} ${raw.slice(0, 200)}`);
+    throw new Error(`ai-gateway: ${res.status} ${raw.slice(0, 240)}`);
   }
 
   const cr = JSON.parse(raw) as {
@@ -176,25 +190,27 @@ bulletsは各40文字以内。shareTextには「婚活偏差値〇〇」（〇�
   };
   if (cr.error?.message) throw new Error(cr.error.message);
   const content = (cr.choices?.[0]?.message?.content ?? "").trim();
-  let jsonStr = content
+  const jsonStr = content
     .replace(/^```json\s*/i, "")
     .replace(/^```\s*/, "")
     .replace(/\s*```$/, "")
     .trim();
 
-  const out = JSON.parse(jsonStr) as DiagnoseResult;
-  out.score = ref;
-  return normalizeResult(out);
+  const out = JSON.parse(jsonStr) as Omit<DiagnoseResult, "score">;
+  return normalizeResult({
+    score: ref,
+    headline: out.headline,
+    bullets: out.bullets,
+    shareText: out.shareText,
+  });
 }
 
 export async function diagnose(
   answers: Record<string, string>
 ): Promise<DiagnoseResult> {
   const clean = canonicalizeAnswers(answers);
-  const key = (process.env.OPENAI_API_KEY ?? "").trim();
-  if (!key) {
+  if (!hasGatewayAuth()) {
     return mockResult(clean);
   }
-  const model = (process.env.OPENAI_MODEL ?? "gpt-4o-mini").trim();
-  return callOpenAI(key, model, clean);
+  return callGateway(clean);
 }
