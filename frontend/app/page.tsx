@@ -174,7 +174,7 @@ export default function HomePage() {
             </button>
           </div>
           <p className="fineprint">
-            バックエンドに <code>OPENAI_API_KEY</code> が無い場合はモック結果になります。
+            <code>AI_GATEWAY_API_KEY</code>（または Vercel 上の OIDC）が無い場合はモック結果になります。
           </p>
         </section>
       )}
