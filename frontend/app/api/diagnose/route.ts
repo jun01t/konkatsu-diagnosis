@@ -30,7 +30,11 @@ export async function POST(req: Request) {
     return NextResponse.json({
       score: res.score,
       headline: res.headline,
+      summary: res.summary,
       bullets: res.bullets,
+      nextActions: res.nextActions,
+      categoryNotes: res.categoryNotes,
+      messageExample: res.messageExample,
       shareText: res.shareText,
       sharePath: `/share/${token}`,
     });

@@ -20,10 +20,21 @@ function gatewayModel(): string {
   return `openai/${raw}`;
 }
 
+export type CategoryNotes = {
+  profile: string;
+  communication: string;
+  action: string;
+  mind: string;
+};
+
 export type DiagnoseResult = {
   score: number;
   headline: string;
+  summary: string;
   bullets: string[];
+  nextActions: string[];
+  categoryNotes: CategoryNotes;
+  messageExample: string;
   shareText: string;
 };
 
@@ -115,31 +126,85 @@ function buildUserContent(answers: Record<string, string>, ref: number): string 
   return s;
 }
 
+function clipRunes(s: string, max: number): string {
+  const t = (s ?? "").trim();
+  const runes = [...t];
+  return runes.length > max ? runes.slice(0, max).join("") : t;
+}
+
+function clipList(items: string[] | undefined, maxItems: number, maxLen: number): string[] {
+  return (items ?? [])
+    .map((x) => clipRunes(x, maxLen))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function emptyNotes(): CategoryNotes {
+  return { profile: "", communication: "", action: "", mind: "" };
+}
+
 function normalizeResult(r: DiagnoseResult): DiagnoseResult {
   let score = r.score;
   if (score < 35) score = 35;
   if (score > 75) score = 75;
-  let bullets = r.bullets ?? [];
-  if (bullets.length > 3) bullets = bullets.slice(0, 3);
-  let shareText = (r.shareText ?? "").trim();
-  const runes = [...shareText];
-  if (runes.length > 280) shareText = runes.slice(0, 280).join("");
-  return { ...r, score, bullets, shareText };
+  const notes = r.categoryNotes ?? emptyNotes();
+  return {
+    score,
+    headline: clipRunes(r.headline, 40),
+    summary: clipRunes(r.summary, 400),
+    bullets: clipList(r.bullets, 5, 90),
+    nextActions: clipList(r.nextActions, 3, 90),
+    categoryNotes: {
+      profile: clipRunes(notes.profile, 140),
+      communication: clipRunes(notes.communication, 140),
+      action: clipRunes(notes.action, 140),
+      mind: clipRunes(notes.mind, 140),
+    },
+    messageExample: clipRunes(r.messageExample, 180),
+    shareText: clipRunes(r.shareText, 280),
+  };
 }
 
 function mockResult(answers: Record<string, string>): DiagnoseResult {
   const score = scoreFromAnswers(answers);
-  let headline = "いまのペースを整えると伸びしろがあります";
-  if (score >= 60) {
-    headline = "土台は良いので、言語化と行動量でさらに安定しそう";
-  }
+  const high = score >= 60;
+  const headline = high
+    ? "土台は良いので、言語化と行動量でさらに安定しそう"
+    : "いまのペースを整えると伸びしろがあります";
+  const summary = high
+    ? "いまの回答からは、プロフィール・会話・行動のどれかがすでに形になっている印象です。このまま勢いで進めるより、相手に伝わる言葉を少し足し、会うまでの導線を週単位で固定すると、出会いの質が安定しやすいです。回復のルートも確保できているなら、その調子を崩さないことがいちばんの伸びしろです。"
+    : "いまの回答からは、整えたいポイントがはっきり見える段階です。一気に全部を変えず、プロフィールの一文、最初のメッセージ、会う提案のどれか1つを先に整えると動きやすいです。疲れが強いときは接触量より睡眠と回復を優先しても、診断上はむしろ健全な判断です。";
   const bullets = [
-    "プロフィールは「目的・週の稼働・得意」を一文ずつ足すと伝わりやすい",
-    "初回メッセージは相手プロフィールの一要素に触れると続きやすい",
-    "疲れが続くなら、接触頻度より睡眠と回復ルートを先に整える",
+    "自己紹介は「会う目的・大事にしていること・週の稼働」を一文ずつ足すと、相手が想像しやすくなります。",
+    "写真は顔・全身・活動の3枚があると雰囲気が伝わり、古い1枚だけより信頼感が出やすいです。",
+    "初回メッセージは相手プロフィールの具体を1つ拾って質問すると、テンプレ感が減って続きやすいです。",
+    "日程は候補日を2〜3日出すと、相手任せになりにくく間が空きにくくなります。",
+    "疲れが続くならアプリの接触頻度より、睡眠・運動・友人など回復ルートを先に整えると続きやすいです。",
   ];
+  const nextActions = [
+    "今日中に自己紹介を3行だけ書き直す（目的・価値観・稼働）。",
+    "今週、相手プロフィールに触れた初回メッセージを3通送る。",
+    "会う提案をするなら、候補日を2日以上セットで出す。",
+  ];
+  const categoryNotes: CategoryNotes = {
+    profile: `自己紹介は「${optionLabel(ALL_QUESTIONS[0], answers.q1)}」、写真は「${optionLabel(ALL_QUESTIONS[1], answers.q2)}」。伝わる材料を足すほど、最初の印象が安定します。`,
+    communication: `初回メッセージは「${optionLabel(ALL_QUESTIONS[2], answers.q3)}」、返信は「${optionLabel(ALL_QUESTIONS[3], answers.q4)}」。具体と丁寧さが続くと温度が落ちにくいです。`,
+    action: `出会いの行動量は「${optionLabel(ALL_QUESTIONS[4], answers.q5)}」、日程調整は「${optionLabel(ALL_QUESTIONS[5], answers.q6)}」。週のルーティンに落とすとムラが減ります。`,
+    mind: `条件整理は「${optionLabel(ALL_QUESTIONS[6], answers.q7)}」、ストレス処理は「${optionLabel(ALL_QUESTIONS[7], answers.q8)}」。譲れる点を言語化すると迷いが減ります。`,
+  };
+  const messageExample =
+    "プロフィールの◯◯、とても印象的でした。休日の過ごし方で大切にしていることはありますか？よければ近いうちにカフェでお話しできたらうれしいです。";
   const shareText = `婚活偏差値っぽいスコア: ${score}（診断・エンタメ）\n${headline}\n#婚活偏差値診断`;
-  return { score, headline, bullets, shareText };
+  return {
+    score,
+    headline,
+    summary,
+    bullets,
+    nextActions,
+    categoryNotes,
+    messageExample,
+    shareText,
+  };
 }
 
 async function callGateway(
@@ -147,14 +212,15 @@ async function callGateway(
 ): Promise<DiagnoseResult> {
   const ref = scoreFromAnswers(answers);
   const userPayload = buildUserContent(answers, ref);
-  const sys = `あなたは日本語の婚活コーチのトーンで、短く具体的に返す。
+  const sys = `あなたは日本語の婚活コーチ。回答内容に触れながら、具体的で前向きに書く。抽象論や人の価値の判定は禁止。
 ${SCORE_GUIDE}
 必ず次のJSONだけを返す（説明文やコードフェンスは禁止）:
-{"headline":"28文字以内の前向きな一言","bullets":["箇条書き1","箇条書き2","箇条書き3"],"shareText":"X投稿用"}
+{"headline":"40文字以内の前向きな一言","summary":"全体総評。3〜5文、200〜350字。回答の具体に触れる","bullets":["アドバイス1","2","3","4","5"],"nextActions":["今週やること1","2","3"],"categoryNotes":{"profile":"プロフィール評80〜130字","communication":"コミュニケーション評80〜130字","action":"行動評80〜130字","mind":"マインド評80〜130字"},"messageExample":"初回メッセージ例。80〜160字。丁寧で続きやすい","shareText":"X投稿用"}
 
 score はサーバー側で ${ref} に固定する（JSON に含めなくてよい）。
-bulletsは各40文字以内。shareTextには「婚活偏差値${ref}」「#婚活偏差値診断」を含める（280文字以内）。
-「改善」「見直し」中心の文言はスコアが低いときだけ。スコアが高めのときは強みの維持・仕上げの観点を中心に。`;
+bulletsは5件・各90文字以内。nextActionsは実行可能な今週タスク。
+shareTextには「婚活偏差値${ref}」「#婚活偏差値診断」を含める（280文字以内）。
+スコアが高めなら強みの維持と仕上げ、低めなら負担の少ない一歩を中心に。`;
 
   const apiKey = (
     process.env.AI_GATEWAY_API_KEY ||
@@ -200,7 +266,11 @@ bulletsは各40文字以内。shareTextには「婚活偏差値${ref}」「#婚�
   return normalizeResult({
     score: ref,
     headline: out.headline,
+    summary: out.summary,
     bullets: out.bullets,
+    nextActions: out.nextActions,
+    categoryNotes: out.categoryNotes ?? emptyNotes(),
+    messageExample: out.messageExample,
     shareText: out.shareText,
   });
 }

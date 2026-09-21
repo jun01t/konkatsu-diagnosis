@@ -153,11 +153,61 @@ export default function HomePage() {
             <span style={{ color: "var(--accent2)" }}>{result.score}</span>
           </p>
           <p className="headline">{result.headline}</p>
-          <ul className="bullets">
-            {(result.bullets ?? []).map((line, i) => (
-              <li key={i}>{line}</li>
-            ))}
-          </ul>
+          {result.summary && <p className="summary">{result.summary}</p>}
+
+          {result.categoryNotes && (
+            <div className="result-block">
+              <h3>カテゴリ別の見立て</h3>
+              <dl className="cat-notes">
+                <div>
+                  <dt>プロフィール</dt>
+                  <dd>{result.categoryNotes.profile}</dd>
+                </div>
+                <div>
+                  <dt>コミュニケーション</dt>
+                  <dd>{result.categoryNotes.communication}</dd>
+                </div>
+                <div>
+                  <dt>行動</dt>
+                  <dd>{result.categoryNotes.action}</dd>
+                </div>
+                <div>
+                  <dt>マインド</dt>
+                  <dd>{result.categoryNotes.mind}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          <div className="result-block">
+            <h3>アドバイス</h3>
+            <ul className="bullets">
+              {(result.bullets ?? []).map((line, i) => (
+                <li key={i}>{line}</li>
+              ))}
+            </ul>
+          </div>
+
+          {(result.nextActions ?? []).length > 0 && (
+            <div className="result-block">
+              <h3>今週やること</h3>
+              <ol className="next-actions">
+                {result.nextActions!.map((line, i) => (
+                  <li key={i}>{line}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {result.messageExample && (
+            <div className="result-block">
+              <h3>初回メッセージの例</h3>
+              <blockquote className="message-example">
+                {result.messageExample}
+              </blockquote>
+            </div>
+          )}
+
           <div className="actions">
             {xHref && (
               <a

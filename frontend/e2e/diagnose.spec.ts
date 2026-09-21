@@ -47,6 +47,10 @@ test.describe("婚活偏差値診断 E2E", () => {
     });
     await expect(page.locator(".scoreline")).toContainText("70");
     await expect(page.locator(".headline")).toContainText("土台は良いので");
+    await expect(page.locator(".summary")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "カテゴリ別の見立て" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "今週やること" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "初回メッセージの例" })).toBeVisible();
     await page.screenshot({
       path: path.join(evidenceDir, "03-result-score-70.png"),
       fullPage: true,
